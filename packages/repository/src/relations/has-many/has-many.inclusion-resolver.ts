@@ -15,6 +15,13 @@ import {
 import {Getter, HasManyDefinition, InclusionResolver} from '../relation.types';
 import {resolveHasManyMetadata} from './has-many.helpers';
 
+/**
+ * Creates hasMany resolver for the relation
+ * 
+ * @param meta - metadata of the hasMany relation
+ * @param getTargetRepo - Target repo
+ */
+
 export function createHasManyInclusionResolver<
   Target extends Entity,
   TargetID,
