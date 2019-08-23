@@ -157,11 +157,19 @@ export function flattenTargetsOfOneToManyRelation<Target extends Entity>(
   targetEntities: Target[],
   targetKey: StringKeyOf<Target>,
 ): (Target[] | undefined)[] {
+  debug('flattenTargetsOfOneToManyRelation');
+  debug('sourceIds', sourceIds);
+  debug('sourceId types', sourceIds.map(i => typeof i));
+  debug('targetEntities', targetEntities);
+  debug('targetKey', targetKey);
+
   const lookup = buildLookupMap<unknown, Target, Target[]>(
     targetEntities,
     targetKey,
     reduceAsArray,
   );
+
+  debug('lookup map', lookup);
 
   return flattenMapByKeys(sourceIds, lookup);
 }
@@ -178,9 +186,11 @@ export function flattenMapByKeys<T>(
   targetMap: Map<unknown, T>,
 ): (T | undefined)[] {
   const result: (T | undefined)[] = new Array(sourceIds.length);
-
+  // mongodb: use string as key of targetMap, and convert sourceId to strings
+  // to make sure it gets the related instances.
   sourceIds.forEach((id, index) => {
-    const target = targetMap.get(id);
+    const key = normalizeKey(id);
+    const target = targetMap.get(key);
     result[index] = target;
   });
 

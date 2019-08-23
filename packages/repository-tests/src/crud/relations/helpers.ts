@@ -49,5 +49,10 @@ export function givenBoundCrudRepositories(
     async () => customerRepo,
   );
 
-  return {customerRepo, orderRepo, shipmentRepo, addressRepo};
+  return {
+    customerRepo,
+    orderRepo,
+    shipmentRepo,
+    addressRepo,
+  };
 }
