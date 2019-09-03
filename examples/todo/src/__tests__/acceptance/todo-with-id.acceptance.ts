@@ -12,20 +12,19 @@ import {
   toJSON,
 } from '@loopback/testlab';
 import {TodoListApplication} from '../../application';
-import {Todo} from '../../models/';
-import {TodoRepository} from '../../repositories/';
+import {TodoWithId} from '../../models';
+import {TodoWithIdRepository} from '../../repositories';
 import {
-  aLocation,
   getProxiedGeoCoderConfig,
   givenCachingProxy,
-  givenTodo,
+  givenTodoWithId,
   HttpCachingProxy,
 } from '../helpers';
 
-describe('TodoApplication - test Todo', () => {
+describe.only('TodoApplication - test TodoWithId', () => {
   let app: TodoListApplication;
   let client: Client;
-  let todoRepo: TodoRepository;
+  let todoWithIdRepo: TodoWithIdRepository;
 
   let cachingProxy: HttpCachingProxy;
   before(async () => (cachingProxy = await givenCachingProxy()));
@@ -34,13 +33,13 @@ describe('TodoApplication - test Todo', () => {
   before(givenRunningApplicationWithCustomConfiguration);
   after(() => app.stop());
 
-  before(givenTodoRepository);
+  before(givenTodoWithIdRepository);
   before(() => {
     client = createRestAppClient(app);
   });
 
   beforeEach(async () => {
-    await todoRepo.deleteAll();
+    await todoWithIdRepo.deleteAll();
   });
 
   it('creates a todo', async function() {
@@ -48,18 +47,18 @@ describe('TodoApplication - test Todo', () => {
     // over the internet and it takes more than 2 seconds
     // eslint-disable-next-line no-invalid-this
     this.timeout(30000);
-    const todo = givenTodo();
+    const todo = givenTodoWithId();
     const response = await client
       .post('/todos')
       .send(todo)
       .expect(200);
     expect(response.body).to.containDeep(todo);
-    const result = await todoRepo.findById(response.body.id);
+    const result = await todoWithIdRepo.findById(response.body.id);
     expect(result).to.containDeep(todo);
   });
 
   it('rejects requests to create a todo with no title', async () => {
-    const todo = givenTodo();
+    const todo = givenTodoWithId();
     delete todo.title;
     await client
       .post('/todos')
@@ -68,7 +67,7 @@ describe('TodoApplication - test Todo', () => {
   });
 
   it('rejects requests with input that contains excluded properties', async () => {
-    const todo = givenTodo();
+    const todo = givenTodoWithId();
     todo.id = 1;
     await client
       .post('/todos')
@@ -76,26 +75,8 @@ describe('TodoApplication - test Todo', () => {
       .expect(422);
   });
 
-  it('creates an address-based reminder', async function() {
-    // Increase the timeout to accommodate slow network connections
-    // eslint-disable-next-line no-invalid-this
-    this.timeout(30000);
-
-    const todo = givenTodo({remindAtAddress: aLocation.address});
-    const response = await client
-      .post('/todos')
-      .send(todo)
-      .expect(200);
-    todo.remindAtGeo = aLocation.geostring;
-
-    expect(response.body).to.containEql(todo);
-
-    const result = await todoRepo.findById(response.body.id);
-    expect(result).to.containEql(todo);
-  });
-
   context('when dealing with a single persisted todo', () => {
-    let persistedTodo: Todo;
+    let persistedTodo: TodoWithId;
 
     beforeEach(async () => {
       persistedTodo = await givenTodoInstance();
@@ -113,42 +94,39 @@ describe('TodoApplication - test Todo', () => {
     });
 
     it('replaces the todo by ID', async () => {
-      const updatedTodo = givenTodo({
+      const updatedTodo = givenTodoWithId({
         title: 'DO SOMETHING AWESOME',
         desc: 'It has to be something ridiculous',
-        isComplete: true,
       });
       await client
         .put(`/todos/${persistedTodo.id}`)
         .send(updatedTodo)
         .expect(204);
-      const result = await todoRepo.findById(persistedTodo.id);
+      const result = await todoWithIdRepo.findById(persistedTodo.id);
       expect(result).to.containEql(updatedTodo);
     });
 
     it('returns 404 when replacing a todo that does not exist', () => {
       return client
         .put('/todos/99999')
-        .send(givenTodo())
+        .send(givenTodoWithId())
         .expect(404);
     });
 
     it('updates the todo by ID ', async () => {
-      const updatedTodo = givenTodo({
-        isComplete: true,
-      });
+      const updatedTodo = givenTodoWithId();
       await client
         .patch(`/todos/${persistedTodo.id}`)
         .send(updatedTodo)
         .expect(204);
-      const result = await todoRepo.findById(persistedTodo.id);
+      const result = await todoWithIdRepo.findById(persistedTodo.id);
       expect(result).to.containEql(updatedTodo);
     });
 
     it('returns 404 when updating a todo that does not exist', () => {
       return client
         .patch('/todos/99999')
-        .send(givenTodo({isComplete: true}))
+        .send(givenTodoWithId())
         .expect(404);
     });
 
@@ -157,9 +135,9 @@ describe('TodoApplication - test Todo', () => {
         .del(`/todos/${persistedTodo.id}`)
         .send()
         .expect(204);
-      await expect(todoRepo.findById(persistedTodo.id)).to.be.rejectedWith(
-        EntityNotFoundError,
-      );
+      await expect(
+        todoWithIdRepo.findById(persistedTodo.id),
+      ).to.be.rejectedWith(EntityNotFoundError);
     });
 
     it('returns 404 when deleting a todo that does not exist', async () => {
@@ -168,11 +146,10 @@ describe('TodoApplication - test Todo', () => {
   });
 
   it('queries todos with a filter', async () => {
-    await givenTodoInstance({title: 'wake up', isComplete: true});
+    await givenTodoInstance({title: 'wake up'});
 
     const todoInProgress = await givenTodoInstance({
       title: 'go to sleep',
-      isComplete: false,
     });
 
     await client
@@ -218,11 +195,11 @@ describe('TodoApplication - test Todo', () => {
     await app.start();
   }
 
-  async function givenTodoRepository() {
-    todoRepo = await app.getRepository(TodoRepository);
+  async function givenTodoWithIdRepository() {
+    todoWithIdRepo = await app.getRepository(TodoWithIdRepository);
   }
 
-  async function givenTodoInstance(todo?: Partial<Todo>) {
-    return todoRepo.create(givenTodo(todo));
+  async function givenTodoInstance(todo?: Partial<TodoWithId>) {
+    return todoWithIdRepo.create(givenTodoWithId(todo));
   }
 });
