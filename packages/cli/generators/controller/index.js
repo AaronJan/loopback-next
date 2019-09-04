@@ -182,6 +182,12 @@ module.exports = class ControllerGenerator extends ArtifactGenerator {
         default: 'number',
       },
       {
+        type: 'confirm',
+        name: 'idRequired',
+        message: 'Is the id required when creating an instance?',
+        default: false,
+      },
+      {
         type: 'input',
         name: 'httpPathName',
         message: 'What is the base HTTP path name of the CRUD operations?',

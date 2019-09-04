@@ -114,6 +114,22 @@ describe('lb4 controller', () => {
       checkRestCrudContents();
     });
 
+    it('creates REST CRUD template with valid input- id required', async () => {
+      await testUtils
+        .executeGenerator(generator)
+        .inDir(SANDBOX_PATH, () =>
+          testUtils.givenLBProject(SANDBOX_PATH, {
+            includeDummyModel: true,
+            includeDummyRepository: true,
+          }),
+        )
+        .withPrompts(
+          Object.assign({}, restCLIInputComplete, {idRequired: true}),
+        );
+
+      checkRestCrudContents({idRequired: true});
+    });
+
     describe('HTTP REST path', () => {
       it('defaults correctly', async () => {
         await testUtils
@@ -228,21 +244,24 @@ function checkBasicContents() {
   assert.fileContent(expectedFile, /constructor\(\) {}/);
 }
 
+function checkCreateContentsWithIdRequired() {
+  const postCreateRegEx = [
+    /\@post\('\/product-reviews', {/,
+    /responses: {/,
+    /'200': {/,
+    /description: 'ProductReview model instance'/,
+    /content: {'application\/json': {schema: getModelSchemaRef\(ProductReview\)}},\s{1,}},\s{1,}},\s{1,}}\)/,
+    /async create\(\s+\@requestBody\({\s+content: {\s+'application\/json': {\s+schema: getModelSchemaRef\(ProductReview\),\s+},\s+},\s+}\)\s+productReview: ProductReview,\s+\)/,
+  ];
+  postCreateRegEx.forEach(regex => {
+    assert.fileContent(expectedFile, regex);
+  });
+}
+
 /**
- * Assertions against the template to determine if it contains the
- * required signatures for a REST CRUD controller, specifically to ensure
- * that decorators are grouped correctly (for their corresponding
- * target functions)
+ * Check the contents for operation 'create' when id is not required.
  */
-function checkRestCrudContents() {
-  assert.fileContent(expectedFile, /class ProductReviewController/);
-
-  // Repository and injection
-  assert.fileContent(expectedFile, /\@repository\(BarRepository\)/);
-  assert.fileContent(expectedFile, /barRepository \: BarRepository/);
-
-  // Assert that the decorators are present in the correct groupings!
-  // @post - create
+function checkCreateContents() {
   const postCreateRegEx = [
     /\@post\('\/product-reviews', {/,
     /responses: {/,
@@ -254,6 +273,28 @@ function checkRestCrudContents() {
   postCreateRegEx.forEach(regex => {
     assert.fileContent(expectedFile, regex);
   });
+}
+
+/**
+ * Assertions against the template to determine if it contains the
+ * required signatures for a REST CRUD controller, specifically to ensure
+ * that decorators are grouped correctly (for their corresponding
+ * target functions)
+ */
+function checkRestCrudContents(options) {
+  assert.fileContent(expectedFile, /class ProductReviewController/);
+
+  // Repository and injection
+  assert.fileContent(expectedFile, /\@repository\(BarRepository\)/);
+  assert.fileContent(expectedFile, /barRepository \: BarRepository/);
+
+  // Assert that the decorators are present in the correct groupings!
+  // @post - create
+  if (options && options.idRequired) {
+    checkCreateContentsWithIdRequired();
+  } else {
+    checkCreateContents();
+  }
 
   // @get - count
   const getCountRegEx = [

@@ -38,11 +38,13 @@ export class TodoWithIdController {
     @requestBody({
       content: {
         'application/json': {
+          // difference
           schema: getModelSchemaRef(TodoWithId),
         },
       },
     })
-    todo: TodoWithId,
+    todo: // difference
+    TodoWithId,
   ): Promise<TodoWithId> {
     return this.todoRepo.create(todo);
   }

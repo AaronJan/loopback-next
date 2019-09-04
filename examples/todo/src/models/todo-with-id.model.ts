@@ -12,7 +12,7 @@ export class TodoWithId extends Entity {
     id: true,
     required: true,
   })
-  id?: number;
+  id: number;
 
   @property({
     type: 'string',

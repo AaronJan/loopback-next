@@ -21,7 +21,7 @@ import {
   HttpCachingProxy,
 } from '../helpers';
 
-describe.only('TodoApplication - test TodoWithId', () => {
+describe('TodoApplication - test TodoWithId', () => {
   let app: TodoListApplication;
   let client: Client;
   let todoWithIdRepo: TodoWithIdRepository;
@@ -47,9 +47,9 @@ describe.only('TodoApplication - test TodoWithId', () => {
     // over the internet and it takes more than 2 seconds
     // eslint-disable-next-line no-invalid-this
     this.timeout(30000);
-    const todo = givenTodoWithId();
+    const todo = givenTodoWithId({id: 1});
     const response = await client
-      .post('/todos')
+      .post('/todosWithId')
       .send(todo)
       .expect(200);
     expect(response.body).to.containDeep(todo);
@@ -58,19 +58,10 @@ describe.only('TodoApplication - test TodoWithId', () => {
   });
 
   it('rejects requests to create a todo with no title', async () => {
-    const todo = givenTodoWithId();
+    const todo = givenTodoWithId({id: 2});
     delete todo.title;
     await client
-      .post('/todos')
-      .send(todo)
-      .expect(422);
-  });
-
-  it('rejects requests with input that contains excluded properties', async () => {
-    const todo = givenTodoWithId();
-    todo.id = 1;
-    await client
-      .post('/todos')
+      .post('/todosWithId')
       .send(todo)
       .expect(422);
   });
@@ -79,12 +70,12 @@ describe.only('TodoApplication - test TodoWithId', () => {
     let persistedTodo: TodoWithId;
 
     beforeEach(async () => {
-      persistedTodo = await givenTodoInstance();
+      persistedTodo = await givenTodoInstance({id: 3});
     });
 
     it('gets a todo by ID', () => {
       return client
-        .get(`/todos/${persistedTodo.id}`)
+        .get(`/todosWithId/${persistedTodo.id}`)
         .send()
         .expect(200, toJSON(persistedTodo));
     });
@@ -95,11 +86,12 @@ describe.only('TodoApplication - test TodoWithId', () => {
 
     it('replaces the todo by ID', async () => {
       const updatedTodo = givenTodoWithId({
+        id: persistedTodo.id,
         title: 'DO SOMETHING AWESOME',
         desc: 'It has to be something ridiculous',
       });
       await client
-        .put(`/todos/${persistedTodo.id}`)
+        .put(`/todosWithId/${persistedTodo.id}`)
         .send(updatedTodo)
         .expect(204);
       const result = await todoWithIdRepo.findById(persistedTodo.id);
@@ -108,15 +100,15 @@ describe.only('TodoApplication - test TodoWithId', () => {
 
     it('returns 404 when replacing a todo that does not exist', () => {
       return client
-        .put('/todos/99999')
-        .send(givenTodoWithId())
+        .put('/todosWithId/99999')
+        .send(givenTodoWithId({id: 99999}))
         .expect(404);
     });
 
     it('updates the todo by ID ', async () => {
       const updatedTodo = givenTodoWithId();
       await client
-        .patch(`/todos/${persistedTodo.id}`)
+        .patch(`/todosWithId/${persistedTodo.id}`)
         .send(updatedTodo)
         .expect(204);
       const result = await todoWithIdRepo.findById(persistedTodo.id);
@@ -125,14 +117,14 @@ describe.only('TodoApplication - test TodoWithId', () => {
 
     it('returns 404 when updating a todo that does not exist', () => {
       return client
-        .patch('/todos/99999')
-        .send(givenTodoWithId())
+        .patch('/todosWithId/99999')
+        .send(givenTodoWithId({id: 7}))
         .expect(404);
     });
 
     it('deletes the todo', async () => {
       await client
-        .del(`/todos/${persistedTodo.id}`)
+        .del(`/todosWithId/${persistedTodo.id}`)
         .send()
         .expect(204);
       await expect(
@@ -141,20 +133,21 @@ describe.only('TodoApplication - test TodoWithId', () => {
     });
 
     it('returns 404 when deleting a todo that does not exist', async () => {
-      await client.del(`/todos/99999`).expect(404);
+      await client.del(`/todosWithId/99999`).expect(404);
     });
   });
 
   it('queries todos with a filter', async () => {
-    await givenTodoInstance({title: 'wake up'});
+    await givenTodoInstance({id: 8, title: 'wake up'});
 
     const todoInProgress = await givenTodoInstance({
+      id: 9,
       title: 'go to sleep',
     });
 
     await client
-      .get('/todos')
-      .query({filter: {where: {isComplete: false}}})
+      .get('/todosWithId')
+      .query({filter: {where: {id: 9}}})
       .expect(200, [toJSON(todoInProgress)]);
   });
 
