@@ -62,6 +62,10 @@ function setupGenerators() {
     path.join(__dirname, '../generators/datasource'),
     PREFIX + 'datasource',
   );
+  env.register(
+    path.join(__dirname, '../generators/import-model'),
+    PREFIX + 'import-model',
+  );
   env.register(path.join(__dirname, '../generators/model'), PREFIX + 'model');
   env.register(
     path.join(__dirname, '../generators/repository'),

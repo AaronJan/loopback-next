@@ -5,6 +5,7 @@
 
 'use strict';
 
+const chalk = require('chalk');
 const debug = require('../lib/debug')('utils');
 const fs = require('fs');
 const path = require('path');
@@ -101,6 +102,32 @@ exports.validateClassName = function(name) {
     );
   }
   return util.format('Class name is invalid: %s', name);
+};
+
+exports.remindAboutNamingRules = function(name, log) {
+  if (name.includes('_')) {
+    this.log(
+      chalk.red('>>> ') +
+        `Underscores _ in the class name will get removed: ${name}`,
+    );
+  }
+  if (name.match(/[\u00C0-\u024F\u1E00-\u1EFF]/)) {
+    this.log(
+      chalk.red('>>> ') +
+        `Accented chars in the class name will get replaced: ${name}`,
+    );
+  }
+};
+
+exports.printClassFileName = function(type, typePlural, name, log) {
+  log(
+    `${exports.toClassName(type)} ${chalk.yellow(
+      name,
+    )} will be created in src/${typePlural}/${chalk.yellow(
+      exports.toFileName(name) + '.' + `${type}.ts`,
+    )}`,
+  );
+  log();
 };
 
 /**
