@@ -45,7 +45,9 @@ module.exports = class ModelImporter extends BaseGenerator {
     this.log();
     this.log(
       chalk.red(
-        '**WARNING: This command is experimental and not feature-complete yet.**',
+        '**WARNING WARNING WARNING**\n' +
+          'This command is experimental and not feature-complete yet.\n' +
+          'Watch the progress at https://github.com/strongloop/loopback-next/issues/2480',
       ),
     );
     this.log();
@@ -80,8 +82,12 @@ module.exports = class ModelImporter extends BaseGenerator {
     this.templateData = this.modelDefinition;
 
     Object.entries(this.templateData.properties).forEach(([k, v]) =>
+      // FIXME: handle properties with array type, e.g. `{type: [object]}`
+      // We need to apply sanitization recursively on nested properties too
       modelUtils.sanitizeProperty(v),
     );
+
+    // FIXME: Handle missing PK property. In LB3, PK is typically defined at runtime by the connector
 
     /* FIXME: The following base model classes should be recognized and mapped to LB4:
       - Model -> Model
@@ -111,10 +117,10 @@ module.exports = class ModelImporter extends BaseGenerator {
       - connector-specific config like SQL table name and MongoDB collection name
     */
 
-    // These last two are so that the template doesn't error out if they aren't there
     // FIXME: parse LB3 "strict" setting
     this.templateData.allowAdditionalProperties = true;
     this.templateData.modelSettings = utils.stringifyModelSettings(
+      // FIXME: load model settings from top-level entries and `.options` prop
       this.templateData.settings || {},
     );
     debug('LB4 model data', this.templateData);
