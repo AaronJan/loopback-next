@@ -70,11 +70,11 @@ export interface CrudRestController<
    */
   readonly repository: EntityCrudRepository<T, IdType>;
 
-  /**
-   * Implementation of the endpoint `POST /`.
-   * @param data Model data
-   */
-  create(data: Omit<T, IdName>): Promise<T>;
+  // /**
+  //  * Implementation of the endpoint `POST /`.
+  //  * @param data Model data
+  //  */
+  // create(data: Omit<T, IdName>): Promise<T>;
 }
 
 /**
@@ -99,6 +99,7 @@ export interface CrudRestControllerOptions {
    * The base path where to "mount" the controller.
    */
   basePath: string;
+  idRequired?: boolean;
 }
 
 /**
@@ -142,25 +143,11 @@ export function defineCrudRestController<
   };
 
   @api({basePath: options.basePath, paths: {}})
-  class CrudRestControllerImpl
+  class CrudRestControllerWithoutCreateImpl
     implements CrudRestController<T, IdType, IdName> {
     constructor(
       public readonly repository: EntityCrudRepository<T, IdType, Relations>,
     ) {}
-
-    @post('/', {
-      ...response.model(200, `${modelName} instance created`, modelCtor),
-    })
-    async create(
-      @body(modelCtor, {exclude: modelCtor.getIdProperties() as (keyof T)[]})
-      data: Omit<T, IdName>,
-    ): Promise<T> {
-      return this.repository.create(
-        // FIXME(bajtos) Improve repository API to support this use case
-        // with no explicit type-casts required
-        data as DataObject<T>,
-      );
-    }
 
     @get('/', {
       ...response.array(200, `Array of ${modelName} instances`, modelCtor, {
@@ -254,8 +241,43 @@ export function defineCrudRestController<
     }
   }
 
-  // See https://github.com/microsoft/TypeScript/issues/14607
-  return CrudRestControllerImpl;
+  if (options && options.idRequired) {
+    class CrudRestControllerImpl extends CrudRestControllerWithoutCreateImpl {
+      @post('/', {
+        ...response.model(200, `${modelName} instance created`, modelCtor),
+      })
+      async create(
+        @body(modelCtor)
+        data: T,
+      ): Promise<T> {
+        return this.repository.create(
+          // FIXME(bajtos) Improve repository API to support this use case
+          // with no explicit type-casts required
+          data as DataObject<T>,
+        );
+      }
+    }
+    // See https://github.com/microsoft/TypeScript/issues/14607
+    return CrudRestControllerImpl;
+  } else {
+    class CrudRestControllerImpl extends CrudRestControllerWithoutCreateImpl {
+      @post('/', {
+        ...response.model(200, `${modelName} instance created`, modelCtor),
+      })
+      async create(
+        @body(modelCtor, {exclude: modelCtor.getIdProperties() as (keyof T)[]})
+        data: Omit<T, IdName>,
+      ): Promise<T> {
+        return this.repository.create(
+          // FIXME(bajtos) Improve repository API to support this use case
+          // with no explicit type-casts required
+          data as DataObject<T>,
+        );
+      }
+    }
+    // See https://github.com/microsoft/TypeScript/issues/14607
+    return CrudRestControllerImpl;
+  }
 }
 
 function getIdSchema<T extends Entity>(
