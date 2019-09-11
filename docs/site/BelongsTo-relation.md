@@ -267,3 +267,132 @@ DO NOT declare
 `@repository.getter(CategoryRepository) protected categoryRepositoryGetter: Getter<CategoryRepository>`
 on constructor to avoid "Circular dependency" error (see
 [issue #2118](https://github.com/strongloop/loopback-next/issues/2118))
+
+## Querying related models
+
+LoopBack 4 has the concept of an `inclusion resolver` in relations, which helps
+to query data through an `include` filter. An inclusion resolver is a function
+that can fetch target models for the given list of source model instances.
+LoopBack 4 creates a different inclusion resolver for each relation type.
+
+The following is an example for using BelongsTo inclusion resolvers:
+
+- Two models: `Customer` and `Address`
+- An `Address` belongs to a `Customer`
+
+```ts
+// import statements
+class Customer extends Entity {
+  @property({
+    id: true,
+  })
+  id: number;
+  // other properties definiton
+
+  // other relations the model might have
+  @hasMany(() => Order, {keyTo: 'customerId'})
+  orders?: Order[];
+}
+```
+
+```ts
+// import statements
+class Address extends Entity {
+  // property definition for id, name
+
+  @belongsTo(() => Customer)
+  customerId: number; // the id type depends on the type of the target id
+
+  // constructor, relation, etc
+}
+```
+
+After setting up the relation in the repository class, the inclusion resolver
+allows users to retrieve all addresses along with their related customers
+through the following code:
+
+```ts
+addressRepo.find({include: [{relation: 'customer'}]});
+```
+
+### Enable/disable the inclusion resolvers:
+
+- Base repository classes have a public property `inclusionResolvers`, which
+  maintains a map containing inclusion resolvers for each relation.
+- The `inclusionResolver` of a certain relation is built when the source
+  repository class calls the `createBelongsToAccessorFor` function in the
+  constructor with the relation name.
+- Call `registerInclusionResolver` to add the resolver of that relation to the
+  `inclusionResolvers` map. (As we realized in LB3, not all relations are
+  allowed to be traversed. Users can decide to which resolvers can be added.)
+  The first parameter is the name of the relation.
+
+The following code snippet shows how to register the inclusion resolver for the
+belongsTo relation 'customer':
+
+```ts
+export class AddressRepository extends DefaultCrudRepository {
+  customer: BelongsToAccessor<Customer, typeof Address.prototype.id>;
+
+  constructor(
+    dataSource: juggler.DataSource,
+    customerRepositoryGetter: Getter<CustomerRepository>,
+  ) {
+    super(Address, dataSource);
+
+    // we already have this line to create a HasManyRepository factory
+    this.customer = this.createBelongsToAccessorFor(
+      'customer',
+      customerRepositoryGetter,
+    );
+
+    // add this line to register inclusion resolver.
+    this.registerInclusion('customer', this.customer.inclusionResolver);
+  }
+}
+```
+
+- We can simply include the relation in queries via `find()`, `findOne()`, and
+  `findById()` methods. Example:
+
+  ```ts
+  addressRepository.find({include: [{relation: 'customer'}]});
+  ```
+
+  which returns:
+
+  ```ts
+  [
+    {
+      id: 1,
+      street: 'Warden Rd',
+      city: 'Thrudheim',
+      province: 'Asgard',
+      customer: {
+        id: 12,
+        name: 'Thor',
+      },
+    },
+    {
+      id: 2,
+      street: 'AgentOfShield',
+      city: 'Culver',
+      province: 'Cali',
+      customer: {
+        id: 10,
+        name: 'Captain',
+      },
+    },
+  ];
+  ```
+
+- You can delete a relation from `inclusionResolvers` to disable the inclusion
+  for a certain relation. e.g
+  `addressRepository.inclusionResolvers.delete('customer')`
+
+{% include note.html content="
+Inclusion with custom scope:
+Besides specifying the relation name to include, it's also possible to specify additional scope constraints.
+However, this feature is not supported yet. Check our GitHub issue for more information:
+[Include related models with a custom scope](https://github.com/strongloop/loopback-next/issues/3453).
+" %}
