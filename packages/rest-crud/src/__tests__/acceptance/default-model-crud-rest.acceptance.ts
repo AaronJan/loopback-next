@@ -44,22 +44,6 @@ describe('CrudRestController for a simple Product model', () => {
     }
   }
 
-  @model()
-  class ProductWithId extends Entity {
-    @property({id: true, required: true})
-    id: number;
-
-    @property({required: true})
-    name: string;
-
-    @property()
-    description?: string;
-
-    constructor(data: Partial<Product>) {
-      super(data);
-    }
-  }
-
   let app: RestApplication;
   let repo: EntityCrudRepository<Product, typeof Product.prototype.id>;
   let client: Client;
@@ -76,58 +60,29 @@ describe('CrudRestController for a simple Product model', () => {
   beforeEach(cleanDatabase);
 
   describe('create', () => {
-    context('id not required', () => {
-      it('creates a new Product', async () => {
-        const response = await client
-          .post('/products')
-          .send({name: 'A pen'})
-          // FIXME: POST should return 201
-          // See https://github.com/strongloop/loopback-next/issues/788
-          .expect(200);
+    it('creates a new Product', async () => {
+      const response = await client
+        .post('/products')
+        .send({name: 'A pen'})
+        // FIXME: POST should return 201
+        // See https://github.com/strongloop/loopback-next/issues/788
+        .expect(200);
 
-        const created = response.body;
-        expect(created).to.containEql({name: 'A pen'});
-        expect(created)
-          .to.have.property('id')
-          .of.type('number');
+      const created = response.body;
+      expect(created).to.containEql({name: 'A pen'});
+      expect(created)
+        .to.have.property('id')
+        .of.type('number');
 
-        const found = (await repo.find())[0];
-        expect(toJSON(found)).to.deepEqual(created);
-      });
-
-      it('rejects request with `id` value', async () => {
-        await client
-          .post('/products')
-          .send({id: 1, name: 'a name'})
-          .expect(422);
-      });
+      const found = (await repo.find())[0];
+      expect(toJSON(found)).to.deepEqual(created);
     });
 
-    context('id required', () => {
-      it('creates a new Product', async () => {
-        const response = await client
-          .post('/productsWithId')
-          .send({id: 1, name: 'A pen'})
-          // FIXME: POST should return 201
-          // See https://github.com/strongloop/loopback-next/issues/788
-          .expect(200);
-
-        const created = response.body;
-        expect(created).to.containEql({id: 1, name: 'A pen'});
-        expect(created)
-          .to.have.property('id')
-          .of.type('number');
-
-        const found = (await repo.find())[0];
-        expect(toJSON(found)).to.deepEqual(created);
-      });
-
-      it('rejects request without `id` value', async () => {
-        await client
-          .post('/productsWithId')
-          .send({name: 'a name'})
-          .expect(422);
-      });
+    it('rejects request with `id` value', async () => {
+      await client
+        .post('/products')
+        .send({id: 1, name: 'a name'})
+        .expect(422);
     });
   });
 
@@ -339,19 +294,7 @@ describe('CrudRestController for a simple Product model', () => {
       'id'
     >(Product, {basePath: '/products'});
 
-    const CrudRestWithIdRequiredController = defineCrudRestController<
-      ProductWithId,
-      typeof Product.prototype.id,
-      'id'
-    >(ProductWithId, {basePath: '/productsWithId', idRequired: true});
-
     class ProductController extends CrudRestController {
-      constructor() {
-        super(repo);
-      }
-    }
-
-    class ProductWithIdController extends CrudRestWithIdRequiredController {
       constructor() {
         super(repo);
       }
@@ -359,7 +302,6 @@ describe('CrudRestController for a simple Product model', () => {
 
     app = new RestApplication({rest: givenHttpServerConfig()});
     app.controller(ProductController);
-    app.controller(ProductWithIdController);
 
     await app.start();
     client = createRestAppClient(app);
