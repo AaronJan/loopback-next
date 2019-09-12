@@ -127,12 +127,13 @@ export class DefaultCrudRepository<
       `Entity ${entityClass.name} must have at least one id/pk property.`,
     );
 
-    this.modelClass = this.definePersistedModel(entityClass);
+    this.modelClass = this.definePersistedModel(entityClass, new Map());
   }
 
   // Create an internal legacy Model attached to the datasource
   private definePersistedModel(
     entityClass: typeof Model,
+    visited: Map<typeof Model, typeof juggler.PersistedModel>,
   ): typeof juggler.PersistedModel {
     const definition = entityClass.definition;
     assert(
@@ -140,38 +141,28 @@ export class DefaultCrudRepository<
       `Entity ${entityClass.name} must have valid model definition.`,
     );
 
+    let resolved = visited.get(entityClass);
+    if (resolved) {
+      return resolved;
+    }
+
     const dataSource = this.dataSource;
 
     const model = dataSource.getModel(definition.name);
     if (model) {
       // The backing persisted model has been already defined.
-      return model as typeof juggler.PersistedModel;
+      resolved = model as typeof juggler.PersistedModel;
+      visited.set(entityClass, resolved);
+      return resolved;
     }
 
     // We need to convert property definitions from PropertyDefinition
     // to plain data object because of a juggler limitation
     const properties: {[name: string]: object} = {};
 
-    // We need to convert PropertyDefinition into the definition that
-    // the juggler understands
-    Object.entries(definition.properties).forEach(([key, value]) => {
-      // always clone value so that we do not modify the original model definition
-      // ensures that model definitions can be reused with multiple datasources
-      if (value.type === 'array' || value.type === Array) {
-        value = Object.assign({}, value, {
-          type: [value.itemType && this.resolvePropertyType(value.itemType)],
-        });
-        delete value.itemType;
-      } else {
-        value = Object.assign({}, value, {
-          type: this.resolvePropertyType(value.type),
-        });
-      }
-      properties[key] = Object.assign({}, value);
-    });
     const modelClass = dataSource.createModel<juggler.PersistedModelClass>(
       definition.name,
-      properties,
+      definition.properties,
       Object.assign(
         // settings that users can override
         {strict: true},
@@ -181,14 +172,50 @@ export class DefaultCrudRepository<
         {strictDelete: false},
       ),
     );
+
+    // Cache the result to allow recursive refs
+    visited.set(entityClass, modelClass);
+
+    // We need to convert PropertyDefinition into the definition that
+    // the juggler understands
+    Object.entries(definition.properties).forEach(([key, value]) => {
+      // always clone value so that we do not modify the original model definition
+      // ensures that model definitions can be reused with multiple datasources
+      if (value.type === 'array' || value.type === Array) {
+        value = Object.assign({}, value, {
+          type: [
+            value.itemType && this.resolvePropertyType(value.itemType, visited),
+          ],
+        });
+        delete value.itemType;
+      } else {
+        value = Object.assign({}, value, {
+          type: this.resolvePropertyType(value.type, visited),
+        });
+      }
+      properties[key] = Object.assign({}, value);
+    });
+
+    // Now the property types have been fully resolved
+    // Force the model to be rebuilt
+    modelClass.definition.rawProperties = properties;
+    delete modelClass.definition.properties;
+
+    // Force rebuild definitions
+    modelClass.definition.build();
     modelClass.attachTo(dataSource);
     return modelClass;
   }
 
-  private resolvePropertyType(type: PropertyType): PropertyType {
+  private resolvePropertyType(
+    type: PropertyType,
+    visited: Map<typeof Model, typeof juggler.PersistedModel>,
+  ): PropertyType {
     const resolved = resolveType(type);
+    // resolveType(ObjectID) returns undefined
+    if (resolved == null) return type;
     return isModelClass(resolved)
-      ? this.definePersistedModel(resolved)
+      ? this.definePersistedModel(resolved, visited)
       : resolved;
   }
 
