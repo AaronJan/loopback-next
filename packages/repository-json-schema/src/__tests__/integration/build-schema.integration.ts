@@ -1082,5 +1082,21 @@ describe('build-schema', () => {
         expect(optionalNameSchema.title).to.equal('ProductPartial');
       });
     });
+
+    it('uses custom title when provided by user', () => {
+      @model({title: 'IgnoredTitle'})
+      class TestModel {
+        @property()
+        id: string;
+      }
+
+      const schema = getJsonSchema(TestModel, {
+        title: 'NewTestModel',
+        partial: true,
+        exclude: ['id'],
+      });
+
+      expect(schema.title).to.equal('NewTestModel');
+    });
   });
 });
