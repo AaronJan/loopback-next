@@ -1110,5 +1110,21 @@ describe('build-schema', () => {
         expect(optionalNameSchema.title).to.equal('ProductPartial');
       });
     });
+
+    it('creates new cache entry for each custom title', () => {
+      @model()
+      class TestModel {}
+
+      // populate the cache
+      getJsonSchema(TestModel, {title: 'First'});
+      getJsonSchema(TestModel, {title: 'Second'});
+
+      // obtain cached instances & verify the title
+      const schema1 = getJsonSchema(TestModel, {title: 'First'});
+      expect(schema1.title).to.equal('First');
+
+      const schema2 = getJsonSchema(TestModel, {title: 'Second'});
+      expect(schema2.title).to.equal('Second');
+    });
   });
 });

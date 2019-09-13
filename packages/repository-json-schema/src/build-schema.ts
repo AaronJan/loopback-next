@@ -71,7 +71,7 @@ export function buildModelCacheKey<T extends object>(
   // New key schema: use the same suffix as we use for schema title
   // For example: "modelPartialWithRelations"
   // Note this new key schema preserves the old key "modelWithRelations"
-  return 'model' + getTitleSuffix(options);
+  return 'model' + (options.title || '') + getTitleSuffix(options);
 }
 
 /**
