@@ -138,3 +138,25 @@ export const testdb: juggler.DataSource = new juggler.DataSource({
   name: 'db',
   connector: 'memory',
 });
+
+export function createCategory(properties: Partial<Category>) {
+  return new Category({
+    name: properties.name,
+    id: properties.id,
+  } as Category);
+}
+
+export function createProduct(properties: Partial<Product>) {
+  return new Product({
+    id: properties.id,
+    name: properties.name,
+    categoryId: properties.categoryId,
+  } as Product);
+}
+
+export function createManufacturer(properties: Partial<Manufacturer>) {
+  return new Manufacturer({
+    name: properties.name,
+    productId: properties.productId,
+  } as Manufacturer);
+}

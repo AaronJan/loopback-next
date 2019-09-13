@@ -232,12 +232,8 @@ export function getKeyValue(model: AnyObject, keyName: string) {
  *
  * @param rawKey
  */
-function normalizeKey(rawKey: unknown) {
-  if (
-    typeof rawKey === 'object' &&
-    rawKey &&
-    rawKey.constructor.name === 'ObjectID'
-  ) {
+export function normalizeKey(rawKey: unknown) {
+  if (isBsonType(rawKey)) {
     return rawKey.toString();
   }
   return rawKey;
@@ -276,11 +272,11 @@ export function deduplicate<T>(input: T[]): T[] {
   }
   assert(Array.isArray(input), 'array argument is required');
 
-  const comparableA = input.map(item =>
+  const comparableArray = input.map(item =>
     isBsonType(item) ? item.toString() : item,
   );
-  for (let i = 0, n = comparableA.length; i < n; i++) {
-    if (comparableA.indexOf(comparableA[i]) === i) {
+  for (let i = 0, n = comparableArray.length; i < n; i++) {
+    if (comparableArray.indexOf(comparableArray[i]) === i) {
       uniqArray.push(input[i]);
     }
   }
@@ -288,7 +284,7 @@ export function deduplicate<T>(input: T[]): T[] {
 }
 
 /**
- * checkd of the valus is BsonType (mongodb)
+ * checks of the valus is BsonType (mongodb)
  * @param value
  */
 export function isBsonType(value: unknown): value is object {

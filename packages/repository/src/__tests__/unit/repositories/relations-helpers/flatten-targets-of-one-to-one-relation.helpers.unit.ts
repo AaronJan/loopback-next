@@ -4,135 +4,83 @@
 // License text available at https://opensource.org/licenses/MIT
 
 import {expect} from '@loopback/testlab';
-import {findByForeignKeys, flattenTargetsOfOneToOneRelation} from '../../../..';
+import {flattenTargetsOfOneToOneRelation} from '../../../..';
 import {
-  CategoryRepository,
-  ProductRepository,
-  ManufacturerRepository,
-  testdb,
+  createCategory,
+  createProduct,
+  createManufacturer,
 } from './relations-helpers-fixtures';
 
 describe('flattenTargetsOfOneToOneRelation', () => {
-  let productRepo: ProductRepository;
-  let categoryRepo: CategoryRepository;
-  let manufacturerRepo: ManufacturerRepository;
-
-  before(() => {
-    manufacturerRepo = new ManufacturerRepository(testdb);
-    productRepo = new ProductRepository(
-      testdb,
-      async () => categoryRepo,
-      async () => manufacturerRepo,
-    );
-    categoryRepo = new CategoryRepository(testdb, async () => productRepo);
-  });
-
-  beforeEach(async () => {
-    await productRepo.deleteAll();
-    await categoryRepo.deleteAll();
-  });
-  describe('get the result of using reduceAsSingleItem strategy for belongsTo relation', async () => {
-    it('get the result of single sourceId', async () => {
-      const stationery = await categoryRepo.create({name: 'stationery'});
-      const pens = await productRepo.create({
-        name: 'pens',
-        categoryId: stationery.id,
-      });
-      const anotherCategory = await categoryRepo.create({name: 'books'});
-      await productRepo.create({
-        name: 'eraser',
-        categoryId: anotherCategory.id,
-      });
-
-      const targetsFound = await findByForeignKeys(
-        categoryRepo,
-        'id',
-        pens.categoryId,
-      );
+  describe('get the result of using reduceAsSingleItem strategy for belongsTo relation', () => {
+    it('get the result of single sourceId', () => {
+      const stationery = createCategory({id: 1, name: 'stationery'});
+      const pen = createProduct({name: 'pen', categoryId: stationery.id});
+      createProduct({name: 'eraser', categoryId: 2});
 
       const result = flattenTargetsOfOneToOneRelation(
-        [pens.categoryId],
-        targetsFound,
+        [pen.categoryId],
+        [stationery],
         'id',
       );
       expect(result).to.eql([stationery]);
     });
-    it('get the result of multiple sourceIds', async () => {
-      const staionery = await categoryRepo.create({name: 'stationery'});
-      const books = await categoryRepo.create({name: 'books'});
-      const pens = await productRepo.create({
-        name: 'pens',
-        categoryId: staionery.id,
+
+    it('get the result of multiple sourceIds', () => {
+      const stationery = createCategory({id: 1, name: 'stationery'});
+      const book = createCategory({id: 2, name: 'book'});
+      const pen = createProduct({name: 'pen', categoryId: stationery.id});
+      const pencil = createProduct({
+        name: 'pencil',
+        categoryId: stationery.id,
       });
-      const pencils = await productRepo.create({
-        name: 'pencils',
-        categoryId: staionery.id,
-      });
-      const erasers = await productRepo.create({
-        name: 'eraser',
-        categoryId: books.id,
-      });
+      const erasers = createProduct({name: 'eraser', categoryId: book.id});
       // the order of sourceIds matters
-      const targetsFound = await findByForeignKeys(categoryRepo, 'id', [
-        erasers.categoryId,
-        pencils.categoryId,
-        pens.categoryId,
-      ]);
       const result = flattenTargetsOfOneToOneRelation(
-        [erasers.categoryId, pencils.categoryId, pens.categoryId],
-        targetsFound,
+        [erasers.categoryId, pencil.categoryId, pen.categoryId],
+        [book, stationery, stationery],
         'id',
       );
-      expect(result).to.deepEqual([books, staionery, staionery]);
+      expect(result).to.deepEqual([book, stationery, stationery]);
     });
   });
 
-  describe('get the result of using reduceAsSingleItem strategy for hasOne relation', async () => {
-    it('get the result of single sourceId', async () => {
-      const pens = await productRepo.create({name: 'pens'});
-      const penMaker = await manufacturerRepo.create({
+  describe('get the result of using reduceAsSingleItem strategy for hasOne relation', () => {
+    it('get the result of single sourceId', () => {
+      const pen = createProduct({id: 1, name: 'pen'});
+      const penMaker = createManufacturer({
         name: 'Mr. Plastic',
-        productId: pens.id,
+        productId: pen.id,
       });
 
-      const targetsFound = await findByForeignKeys(
-        manufacturerRepo,
-        'productId',
-        pens.id,
-      );
-
       const result = flattenTargetsOfOneToOneRelation(
-        [pens.id],
-        targetsFound,
+        [pen.id],
+        [penMaker],
         'productId',
       );
       expect(result).to.eql([penMaker]);
     });
-    it('get the result of multiple sourceIds', async () => {
-      const pens = await productRepo.create({name: 'pens'});
-      const pencils = await productRepo.create({name: 'pencils'});
-      const erasers = await productRepo.create({name: 'eraser'});
-      const penMaker = await manufacturerRepo.create({
+
+    it('get the result of multiple sourceIds', () => {
+      const pen = createProduct({id: 1, name: 'pen'});
+      const pencil = createProduct({id: 2, name: 'pencil'});
+      const eraser = createProduct({id: 3, name: 'eraser'});
+      const penMaker = createManufacturer({
         name: 'Mr. Plastic',
-        productId: pens.id,
+        productId: pen.id,
       });
-      const pencilMaker = await manufacturerRepo.create({
+      const pencilMaker = createManufacturer({
         name: 'Mr. Tree',
-        productId: pencils.id,
+        productId: pencil.id,
       });
-      const eraserMaker = await manufacturerRepo.create({
+      const eraserMaker = createManufacturer({
         name: 'Mr. Rubber',
-        productId: erasers.id,
+        productId: eraser.id,
       });
       // the order of sourceIds matters
-      const targetsFound = await findByForeignKeys(
-        manufacturerRepo,
-        'productId',
-        [erasers.id, pencils.id, pens.id],
-      );
       const result = flattenTargetsOfOneToOneRelation(
-        [erasers.id, pencils.id, pens.id],
-        targetsFound,
+        [eraser.id, pencil.id, pen.id],
+        [penMaker, pencilMaker, eraserMaker],
         'productId',
       );
       expect(result).to.deepEqual([eraserMaker, pencilMaker, penMaker]);
