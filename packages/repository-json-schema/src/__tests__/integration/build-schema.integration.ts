@@ -630,6 +630,34 @@ describe('build-schema', () => {
         expect(schema).to.deepEqual(expectedSchema);
       });
     });
+
+    it('uses title from model metadata instead of model name', () => {
+      @model({title: 'MyCustomer'})
+      class Customer {}
+
+      const schema = modelToJsonSchema(Customer, {
+        // trigger build of a custom title
+        partial: true,
+      });
+
+      expect(schema.title).to.equal('MyCustomerPartial');
+    });
+
+    it('uses title from options instead of model name and computed suffix', () => {
+      @model({title: 'ShouldBeIgnored'})
+      class TestModel {
+        @property()
+        id: string;
+      }
+
+      const schema = modelToJsonSchema(TestModel, {
+        title: 'NewTestModel',
+        partial: true,
+        exclude: ['id'],
+      });
+
+      expect(schema.title).to.equal('NewTestModel');
+    });
   });
 
   describe('getJsonSchema', () => {
@@ -1081,22 +1109,6 @@ describe('build-schema', () => {
         expect(optionalNameSchema.required).to.equal(undefined);
         expect(optionalNameSchema.title).to.equal('ProductPartial');
       });
-    });
-
-    it('uses custom title when provided by user', () => {
-      @model({title: 'IgnoredTitle'})
-      class TestModel {
-        @property()
-        id: string;
-      }
-
-      const schema = getJsonSchema(TestModel, {
-        title: 'NewTestModel',
-        partial: true,
-        exclude: ['id'],
-      });
-
-      expect(schema.title).to.equal('NewTestModel');
     });
   });
 });
