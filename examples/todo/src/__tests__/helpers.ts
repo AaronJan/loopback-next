@@ -7,7 +7,7 @@ import {HttpCachingProxy} from '@loopback/http-caching-proxy';
 import {merge} from 'lodash';
 import * as path from 'path';
 import * as GEO_CODER_CONFIG from '../datasources/geocoder.datasource.json';
-import {Todo, TodoWithId} from '../models/index';
+import {Todo} from '../models/index';
 import {GeoPoint} from '../services/geocoder.service';
 
 /*
@@ -44,21 +44,6 @@ export function givenTodo(todo?: Partial<Todo>) {
     todo,
   );
   return new Todo(data);
-}
-
-/**
- * Generate a complete Todo object for use with tests.
- * @param todo - A partial (or complete) Todo object.
- */
-export function givenTodoWithId(todo?: Partial<TodoWithId>) {
-  const data = Object.assign(
-    {
-      title: 'do a thing',
-      desc: 'There are some things that need doing',
-    },
-    todo,
-  );
-  return new TodoWithId(data);
 }
 
 export const aLocation = {

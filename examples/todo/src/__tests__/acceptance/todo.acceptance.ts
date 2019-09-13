@@ -22,7 +22,7 @@ import {
   HttpCachingProxy,
 } from '../helpers';
 
-describe('TodoApplication - test Todo', () => {
+describe('TodoApplication', () => {
   let app: TodoListApplication;
   let client: Client;
   let todoRepo: TodoRepository;
