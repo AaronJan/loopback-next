@@ -14,6 +14,10 @@ import {
 } from '@loopback/context';
 import {Counter, Gauge, Histogram, Summary} from 'prom-client';
 
+/**
+ * This interceptor captures metrics for method invocations. Please note that
+ * metrics can be collected by other places, such as sequence of actions.
+ */
 @bind(asGlobalInterceptor('metrics'), {scope: BindingScope.SINGLETON})
 export class MetricsInterceptor implements Provider<Interceptor> {
   private gauge = new Gauge({
