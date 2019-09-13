@@ -3,22 +3,9 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-import {expect, toJSON} from '@loopback/testlab';
+import {expect} from '@loopback/testlab';
 import {ObjectID} from 'bson';
-import {} from 'bson';
-import {testdb} from './relations-helpers-fixtures';
-import {
-  belongsTo,
-  BelongsToAccessor,
-  DefaultCrudRepository,
-  Entity,
-  Getter,
-  hasMany,
-  HasManyRepositoryFactory,
-  juggler,
-  model,
-  property,
-} from '../../../..';
+import {belongsTo, Entity, hasMany, model, property} from '../../../..';
 import {
   isBsonType,
   deduplicate,
@@ -27,22 +14,9 @@ import {
   reduceAsArray,
 } from '../../../../relations';
 
-describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resolver ', () => {
-  let productRepo: ProductRepository;
-  let categoryRepo: CategoryRepository;
-
-  before(() => {
-    productRepo = new ProductRepository(testdb);
-    categoryRepo = new CategoryRepository(testdb, async () => productRepo);
-  });
-
-  beforeEach(async () => {
-    await productRepo.deleteAll();
-    await categoryRepo.deleteAll();
-  });
-
+describe('unit tests, simulates mongodb env for helpers of ininclusion resolver ', () => {
   describe('helpers for formating instances', async () => {
-    it('isBsinType', async () => {
+    it('isBsonType', async () => {
       const id1 = new ObjectID();
       const id2 = new ObjectID();
       expect(isBsonType(id1)).to.be.true();
@@ -54,9 +28,7 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
 
       const result = deduplicate([id1, id2]);
 
-      expect(result).to.deepEqual(toJSON([id1, id2]));
-      expect(typeof result[0] === 'string').to.be.true();
-      expect(typeof result[1] === 'string').to.be.true();
+      expect(result).to.deepEqual([id1, id2]);
     });
     it('multiple items deduplcate + isBsonType', async () => {
       const id1 = new ObjectID();
@@ -66,7 +38,7 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
 
       const result = deduplicate([id3, id1, id1, id3, id2]);
 
-      expect(result).to.deepEqual(toJSON([id3, id1, id2]));
+      expect(result).to.deepEqual([id3, id1, id2]);
     });
   });
 
@@ -82,14 +54,10 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
     });
     it('normalizeKey + buildLookupMap: returns multiple instances in an array', async () => {
       const categoryId = new ObjectID();
-      const anotherCatId = new ObjectID();
-      const pen = await categoryRepo.products(categoryId).create({
-        name: 'pen',
-      });
-      const pencil = await categoryRepo.products(categoryId).create({
-        name: 'pencil',
-      });
-      await productRepo.create({name: 'eraser', categoryId: anotherCatId});
+      const anotherCategoryId = new ObjectID();
+      const pen = createPen(categoryId);
+      const pencil = createPencil(categoryId);
+      createPEraser(anotherCategoryId);
 
       const result = buildLookupMap<unknown, Product, Category[]>(
         [pen, pencil],
@@ -104,19 +72,10 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
     });
     it('normalizeKey + buildLookupMap: return instances in multiple arrays', async () => {
       const categoryId = new ObjectID();
-      const anotherCategorytId = new ObjectID();
-      const pen = await productRepo.create({
-        name: 'pen',
-        categoryId: categoryId,
-      });
-      const pencil = await productRepo.create({
-        name: 'pencil',
-        categoryId: categoryId,
-      });
-      const eraser = await productRepo.create({
-        name: 'eraser',
-        categoryId: anotherCategorytId,
-      });
+      const anotherCategoryId = new ObjectID();
+      const pen = createPen(categoryId);
+      const pencil = createPencil(categoryId);
+      const eraser = createPEraser(anotherCategoryId);
 
       const result = buildLookupMap<unknown, Product, Category[]>(
         [pen, eraser, pencil],
@@ -126,13 +85,14 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
       // expects this map to have String/Product pair
       const expected = new Map<String, Array<Product>>();
       const strId1 = categoryId.toString();
-      const strId2 = anotherCategorytId.toString();
+      const strId2 = anotherCategoryId.toString();
       expected.set(strId1, [pen, pencil]);
       expected.set(strId2, [eraser]);
       expect(result).to.eql(expected);
     });
   });
 
+  //** helpers
   @model()
   class Product extends Entity {
     // uses unknown for id type in this test to get rid of type error:
@@ -143,27 +103,6 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
     name: string;
     @belongsTo(() => Category)
     categoryId: unknown;
-  }
-
-  class ProductRepository extends DefaultCrudRepository<
-    Product,
-    typeof Product.prototype.id
-  > {
-    public readonly category: BelongsToAccessor<
-      Category,
-      typeof Product.prototype.id
-    >;
-    constructor(
-      dataSource: juggler.DataSource,
-      categoryRepository?: Getter<CategoryRepository>,
-    ) {
-      super(Product, dataSource);
-      if (categoryRepository)
-        this.category = this.createBelongsToAccessorFor(
-          'category',
-          categoryRepository,
-        );
-    }
   }
 
   @model()
@@ -179,24 +118,22 @@ describe('unit tests, simulates mongodb env fßßor helpers of ininclusion resol
     products?: Product[];
   }
 
-  class CategoryRepository extends DefaultCrudRepository<
-    Category,
-    typeof Category.prototype.id,
-    CategoryRelations
-  > {
-    public readonly products: HasManyRepositoryFactory<
-      Product,
-      typeof Category.prototype.id
-    >;
-    constructor(
-      dataSource: juggler.DataSource,
-      productRepository: Getter<ProductRepository>,
-    ) {
-      super(Category, dataSource);
-      this.products = this.createHasManyRepositoryFactoryFor(
-        'products',
-        productRepository,
-      );
-    }
+  function createPen(cid: unknown) {
+    const pen = new Product();
+    pen.name = 'pen';
+    pen.categoryId = cid;
+    return pen;
+  }
+  function createPencil(cid: unknown) {
+    const pencil = new Product();
+    pencil.name = 'pencil';
+    pencil.categoryId = cid;
+    return pencil;
+  }
+  function createPEraser(cid: unknown) {
+    const eraser = new Product();
+    eraser.name = 'pencil';
+    eraser.categoryId = cid;
+    return eraser;
   }
 });

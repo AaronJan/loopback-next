@@ -235,8 +235,8 @@ export function reduceAsSingleItem<T>(_acc: T | undefined, it: T) {
  * @param {Array} input an array
  * @returns {Array} an array with unique items
  */
-export function deduplicate<T>(input: T[]): unknown[] {
-  const uniqArray: unknown[] = [];
+export function deduplicate<T>(input: T[]): T[] {
+  const uniqArray: T[] = [];
   if (!input) {
     return uniqArray;
   }
@@ -247,7 +247,7 @@ export function deduplicate<T>(input: T[]): unknown[] {
   );
   for (let i = 0, n = comparableA.length; i < n; i++) {
     if (comparableA.indexOf(comparableA[i]) === i) {
-      uniqArray.push(comparableA[i]);
+      uniqArray.push(input[i]);
     }
   }
   return uniqArray;

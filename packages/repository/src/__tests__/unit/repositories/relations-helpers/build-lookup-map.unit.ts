@@ -5,36 +5,13 @@
 
 import {expect} from '@loopback/testlab';
 import {buildLookupMap, reduceAsArray, reduceAsSingleItem} from '../../../..';
-import {
-  Category,
-  CategoryRepository,
-  Product,
-  ProductRepository,
-  testdb,
-} from './relations-helpers-fixtures';
+import {Category, Product} from './relations-helpers-fixtures';
 
 describe('buildLookupMap', () => {
-  let productRepo: ProductRepository;
-  let categoryRepo: CategoryRepository;
-
-  before(() => {
-    productRepo = new ProductRepository(testdb);
-    categoryRepo = new CategoryRepository(testdb, async () => productRepo);
-  });
-
-  beforeEach(async () => {
-    await productRepo.deleteAll();
-    await categoryRepo.deleteAll();
-  });
-
   describe('get the result of using reduceAsArray strategy for hasMany relation', async () => {
     it('returns multiple instances in an array', async () => {
-      const pen = await productRepo.create({name: 'pen', categoryId: 1});
-      const pencil = await productRepo.create({
-        name: 'pencil',
-        categoryId: 1,
-      });
-      await productRepo.create({name: 'eraser', categoryId: 2});
+      const pen = createPen(1);
+      const pencil = createPencil(1);
 
       const result = buildLookupMap<unknown, Product, Category[]>(
         [pen, pencil],
@@ -47,13 +24,10 @@ describe('buildLookupMap', () => {
     });
 
     it('return instances in multiple arrays', async () => {
-      const pen = await productRepo.create({name: 'pen', categoryId: 1});
-      const pencil = await productRepo.create({
-        name: 'pencil',
-        categoryId: 1,
-      });
-      const eraser = await productRepo.create({name: 'eraser', categoryId: 2});
-
+      const pen = createPen(1);
+      const pencil = createPencil(1);
+      const eraser = createPEraser(2);
+      // 'id' is the foreign key in Category in respect to Product when we talk about belongsTo
       const result = buildLookupMap<unknown, Product, Category[]>(
         [pen, eraser, pencil],
         'categoryId',
@@ -68,11 +42,7 @@ describe('buildLookupMap', () => {
 
   describe('get the result of using reduceAsSingleItem strategy for belongsTo relation', async () => {
     it('returns one instance when one target instance is passed in', async () => {
-      const cat = await categoryRepo.create({id: 1, name: 'angus'});
-      await productRepo.create({name: 'pen', categoryId: 1});
-      //const pencils = await productRepo.create({name: 'pencils', categoryId: 1});
-      await productRepo.create({name: 'eraser', categoryId: 2});
-      // 'id' is the foreign key in Category in respect to Product when we talk about belongsTo
+      const cat = createStationery(1);
 
       const result = buildLookupMap<unknown, Category>(
         [cat],
@@ -85,13 +55,10 @@ describe('buildLookupMap', () => {
     });
 
     it('returns multiple instances when multiple target instances are passed in', async () => {
-      const cat1 = await categoryRepo.create({id: 1, name: 'Angus'});
-      const cat2 = await categoryRepo.create({id: 2, name: 'Nola'});
-      await productRepo.create({name: 'pen', categoryId: 1});
-      await productRepo.create({name: 'pencil', categoryId: 1});
-      await productRepo.create({name: 'eraser', categoryId: 2});
-      // 'id' is the foreign key in Category in respect to Product when we talk about belongsTo
+      const cat1 = createBook(1);
+      const cat2 = createBook(2);
 
+      // 'id' is the foreign key in Category in respect to Product when we talk about belongsTo
       const result = buildLookupMap<unknown, Category>(
         [cat1, cat2],
         'id',
@@ -103,4 +70,36 @@ describe('buildLookupMap', () => {
       expect(result).to.eql(expected);
     });
   });
+
+  //** helpers
+  function createStationery(id: number) {
+    const pen = new Category();
+    pen.name = 'stationery';
+    pen.id = id;
+    return pen;
+  }
+  function createBook(id: number) {
+    const pen = new Category();
+    pen.name = 'book';
+    pen.id = id;
+    return pen;
+  }
+  function createPen(cid: number) {
+    const pen = new Product();
+    pen.name = 'pen';
+    pen.categoryId = cid;
+    return pen;
+  }
+  function createPencil(cid: number) {
+    const pencil = new Product();
+    pencil.name = 'pencil';
+    pencil.categoryId = cid;
+    return pencil;
+  }
+  function createPEraser(cid: number) {
+    const eraser = new Product();
+    eraser.name = 'pencil';
+    eraser.categoryId = cid;
+    return eraser;
+  }
 });
