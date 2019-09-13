@@ -322,31 +322,8 @@ to query data through an `include` filter. An inclusion resolver is a function
 that can fetch target models for the given list of source model instances.
 LoopBack 4 creates a different inclusion resolver for each relation type.
 
-The following is an example for a HasMany inclusion resolver:
-
-- Two models: `Customer` and `Order`
-- A `Customer` has many `Order`s
-
-```ts
-// import statements
-class Customer extends Entity {
-  // property definition for id, name
-  @hasMany(() => Order, {keyTo: 'customerId'})
-  orders?: Order[];
-}
-```
-
-```ts
-// import statements
-class Order extends Entity {
-  // property definition for id, name
-  @property({
-    type: 'number',
-  })
-  customerId?: number;
-  // constructor, relation, etc
-}
-```
+Use the relation between `Customer` and `Order` we show above, a `Customer` has
+many `Order`s.
 
 After setting up the relation in the repository class, the inclusion resolver
 allows users to retrieve all customers along with their related orders through
