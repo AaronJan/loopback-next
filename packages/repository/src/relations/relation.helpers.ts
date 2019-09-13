@@ -269,7 +269,7 @@ export function reduceAsSingleItem<T>(_acc: T | undefined, it: T) {
  * @param {Array} input an array
  * @returns {Array} an array with unique items
  */
-export function uniq<T>(input: T[]): T[] {
+export function deduplicate<T>(input: T[]): T[] {
   const uniqArray: T[] = [];
   if (!input) {
     return uniqArray;

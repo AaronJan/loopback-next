@@ -11,7 +11,7 @@ import {
   findByForeignKeys,
   flattenTargetsOfOneToOneRelation,
   StringKeyOf,
-  uniq,
+  deduplicate,
 } from '../relation.helpers';
 import {
   BelongsToDefinition,
@@ -47,7 +47,7 @@ export function createBelongsToInclusionResolver<
     const targetsFound = await findByForeignKeys(
       targetRepo,
       targetKey,
-      uniq(sourceIds),
+      deduplicate(sourceIds),
       inclusion.scope as Filter<Target>,
       options,
     );

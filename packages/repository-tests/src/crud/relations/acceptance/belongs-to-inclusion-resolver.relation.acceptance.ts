@@ -115,11 +115,6 @@ export function hasManyRelationAcceptance(
           ).to.be.rejectedWith(
             `Invalid "filter.include" entries: {"relation":"customer"}`,
           );
-          // reset
-          addressRepo.inclusionResolvers.set(
-            'customer',
-            addressRepo.customer!.inclusionResolver,
-          );
         });
 
         it('simple belongs-to relation retrieve via find() method', async () => {

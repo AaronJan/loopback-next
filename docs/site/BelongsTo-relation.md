@@ -277,35 +277,8 @@ LoopBack 4 creates a different inclusion resolver for each relation type.
 
 The following is an example for using BelongsTo inclusion resolvers:
 
-- Two models: `Customer` and `Address`
-- An `Address` belongs to a `Customer`
-
-```ts
-// import statements
-class Customer extends Entity {
-  @property({
-    id: true,
-  })
-  id: number;
-  // other properties definiton
-
-  // other relations the model might have
-  @hasMany(() => Order, {keyTo: 'customerId'})
-  orders?: Order[];
-}
-```
-
-```ts
-// import statements
-class Address extends Entity {
-  // property definition for id, name
-
-  @belongsTo(() => Customer)
-  customerId: number; // the id type depends on the type of the target id
-
-  // constructor, relation, etc
-}
-```
+Use the relation between `Customer` and `Order` we show above, an `Order`
+belongs to a `Customer`.
 
 After setting up the relation in the repository class, the inclusion resolver
 allows users to retrieve all addresses along with their related customers
