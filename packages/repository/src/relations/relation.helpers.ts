@@ -3,6 +3,7 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
+import * as assert from 'assert';
 import * as debugFactory from 'debug';
 import * as _ from 'lodash';
 import {
@@ -46,7 +47,14 @@ export async function findByForeignKeys<
 
   if (Array.isArray(fkValues)) {
     if (fkValues.length === 0) return [];
-    value = fkValues.length === 1 ? fkValues[0] : {inq: fkValues};
+    value =
+      fkValues.length === 1
+        ? fkValues[0]
+        : {
+            // Create a copy to prevent query coercion algorithm
+            // inside connectors from modifying the original values
+            inq: [...fkValues],
+          };
   } else {
     value = fkValues;
   }
@@ -135,7 +143,7 @@ function isInclusionAllowed<T extends Entity, Relations extends object = {}>(
 
 /**
  * Returns an array of arrays. Each nested array has one or more instances
- * as a result of one to many relation. The order of arrays is based on 
+ * as a result of one to many relation. The order of arrays is based on
  * the order of sourceIds
  *
  * @param sourceIds - One value or array of values of the target key
@@ -159,7 +167,7 @@ export function flattenTargetsOfOneToManyRelation<Target extends Entity>(
 }
 
 /**
- * Returns an array of instances from the target map. The order of arrays is based on 
+ * Returns an array of instances from the target map. The order of arrays is based on
  * the order of sourceIds
  *
  * @param sourceIds - One value or array of values (of the target key)
@@ -180,8 +188,8 @@ export function flattenMapByKeys<T>(
 }
 
 /**
- * Returns a map which maps key values(ids) to instances. The instances can be  
- * grouped by different strategies. 
+ * Returns a map which maps key values(ids) to instances. The instances can be
+ * grouped by different strategies.
  *
  * @param list - an array of instances
  * @param keyName - key name of the source
@@ -205,15 +213,23 @@ export function buildLookupMap<Key, InType, OutType = InType>(
 }
 
 /**
- * Returns value of a keyName. Aims to resolve ObjectId problem of Mongo
+ * Returns value of a keyName. Aims to resolve ObjectId problem of Mongo.
  *
  * @param model - target model
  * @param keyName - target key that gets the value from
  */
-export function getKeyValue<T>(model: T, keyName: string) {
-  const rawKey = (model as AnyObject)[keyName];
-  // Hacky workaround for MongoDB, see _SPIKE_.md for details
-  if (typeof rawKey === 'object' && rawKey.constructor.name === 'ObjectID') {
+export function getKeyValue(model: AnyObject, keyName: string) {
+  return normalizeKey(model[keyName]);
+}
+
+/**
+ * Workaround for MongoDB, where the connector returns ObjectID
+ * values even for properties configured with "type: string".
+ *
+ * @param rawKey
+ */
+export function normalizeKey(rawKey: unknown) {
+  if (isBsonType(rawKey)) {
     return rawKey.toString();
   }
   return rawKey;
@@ -238,4 +254,42 @@ export function reduceAsArray<T>(acc: T[] | undefined, it: T) {
  */
 export function reduceAsSingleItem<T>(_acc: T | undefined, it: T) {
   return it;
+}
+
+/**
+ * Dedupe an array
+ * @param {Array} input an array
+ * @returns {Array} an array with unique items
+ */
+export function deduplicate<T>(input: T[]): T[] {
+  const uniqArray: T[] = [];
+  if (!input) {
+    return uniqArray;
+  }
+  assert(Array.isArray(input), 'array argument is required');
+
+  const comparableArray = input.map(item =>
+    isBsonType(item) ? item.toString() : item,
+  );
+  for (let i = 0, n = comparableArray.length; i < n; i++) {
+    if (comparableArray.indexOf(comparableArray[i]) === i) {
+      uniqArray.push(input[i]);
+    }
+  }
+  return uniqArray;
+}
+
+/**
+ * checks of the valus is BsonType (mongodb)
+ * @param value
+ */
+export function isBsonType(value: unknown): value is object {
+  if (typeof value !== 'object' || !value) return false;
+
+  // bson@1.x stores _bsontype on ObjectID instance, bson@4.x on prototype
+  return check(value) || check(value.constructor.prototype);
+
+  function check(target: unknown) {
+    return Object.prototype.hasOwnProperty.call(target, '_bsontype');
+  }
 }
