@@ -14,44 +14,7 @@ import {
   juggler,
   model,
   property,
-  hasOne,
-  HasOneRepositoryFactory,
 } from '../../../..';
-
-@model()
-export class Manufacturer extends Entity {
-  @property({id: true})
-  id: number;
-  @property()
-  name: string;
-  @belongsTo(() => Product)
-  productId: number;
-}
-interface ManufacturerRelations {
-  products?: Product;
-}
-
-export class ManufacturerRepository extends DefaultCrudRepository<
-  Manufacturer,
-  typeof Manufacturer.prototype.id,
-  ManufacturerRelations
-> {
-  public readonly product: BelongsToAccessor<
-    Product,
-    typeof Manufacturer.prototype.id
-  >;
-  constructor(
-    dataSource: juggler.DataSource,
-    productRepository?: Getter<ProductRepository>,
-  ) {
-    super(Manufacturer, dataSource);
-    if (productRepository)
-      this.product = this.createBelongsToAccessorFor(
-        'product',
-        productRepository,
-      );
-  }
-}
 
 @model()
 export class Product extends Entity {
@@ -59,43 +22,27 @@ export class Product extends Entity {
   id: number;
   @property()
   name: string;
-  @hasOne(() => Manufacturer)
-  manufacturer: Manufacturer;
   @belongsTo(() => Category)
   categoryId: number;
-}
-interface ProductRelations {
-  manufacturer?: Manufacturer;
 }
 
 export class ProductRepository extends DefaultCrudRepository<
   Product,
-  typeof Product.prototype.id,
-  ProductRelations
+  typeof Product.prototype.id
 > {
   public readonly category: BelongsToAccessor<
     Category,
     typeof Product.prototype.id
   >;
-  public readonly manufacturer: HasOneRepositoryFactory<
-    Manufacturer,
-    typeof Product.prototype.id
-  >;
   constructor(
     dataSource: juggler.DataSource,
     categoryRepository?: Getter<CategoryRepository>,
-    manyfacturerRepository?: Getter<ManufacturerRepository>,
   ) {
     super(Product, dataSource);
     if (categoryRepository)
       this.category = this.createBelongsToAccessorFor(
         'category',
         categoryRepository,
-      );
-    if (manyfacturerRepository)
-      this.manufacturer = this.createHasOneRepositoryFactoryFor(
-        'manufacturer',
-        manyfacturerRepository,
       );
   }
 }
@@ -138,3 +85,17 @@ export const testdb: juggler.DataSource = new juggler.DataSource({
   name: 'db',
   connector: 'memory',
 });
+
+export function createCategory(properties: Partial<Category>) {
+  return new Category({
+    name: properties.name,
+    id: properties.id,
+  } as Category);
+}
+
+export function createProduct(properties: Partial<Product>) {
+  return new Product({
+    name: properties.name,
+    categoryId: properties.categoryId,
+  } as Product);
+}

@@ -5,13 +5,18 @@
 
 import {expect} from '@loopback/testlab';
 import {buildLookupMap, reduceAsArray, reduceAsSingleItem} from '../../../..';
-import {Category, Product} from './relations-helpers-fixtures';
+import {
+  Category,
+  Product,
+  createProduct,
+  createCategory,
+} from './relations-helpers-fixtures';
 
 describe('buildLookupMap', () => {
   describe('get the result of using reduceAsArray strategy for hasMany relation', async () => {
-    it('returns multiple instances in an array', async () => {
-      const pen = createPen(1);
-      const pencil = createPencil(1);
+    it('returns multiple instances in an array', () => {
+      const pen = createProduct({name: 'pen', categoryId: 1});
+      const pencil = createProduct({name: 'pencil', categoryId: 1});
 
       const result = buildLookupMap<unknown, Product, Category[]>(
         [pen, pencil],
@@ -23,10 +28,10 @@ describe('buildLookupMap', () => {
       expect(result).to.eql(expected);
     });
 
-    it('return instances in multiple arrays', async () => {
-      const pen = createPen(1);
-      const pencil = createPencil(1);
-      const eraser = createPEraser(2);
+    it('return instances in multiple arrays', () => {
+      const pen = createProduct({name: 'pen', categoryId: 1});
+      const pencil = createProduct({name: 'pencil', categoryId: 1});
+      const eraser = createProduct({name: 'eraser', categoryId: 2});
       // 'id' is the foreign key in Category in respect to Product when we talk about belongsTo
       const result = buildLookupMap<unknown, Product, Category[]>(
         [pen, eraser, pencil],
@@ -41,8 +46,8 @@ describe('buildLookupMap', () => {
   });
 
   describe('get the result of using reduceAsSingleItem strategy for belongsTo relation', async () => {
-    it('returns one instance when one target instance is passed in', async () => {
-      const cat = createStationery(1);
+    it('returns one instance when one target instance is passed in', () => {
+      const cat = createCategory({name: 'stationery', id: 1});
 
       const result = buildLookupMap<unknown, Category>(
         [cat],
@@ -54,9 +59,9 @@ describe('buildLookupMap', () => {
       expect(result).to.eql(expected);
     });
 
-    it('returns multiple instances when multiple target instances are passed in', async () => {
-      const cat1 = createBook(1);
-      const cat2 = createBook(2);
+    it('returns multiple instances when multiple target instances are passed in', () => {
+      const cat1 = createCategory({name: 'stationery', id: 1});
+      const cat2 = createCategory({name: 'book', id: 2});
 
       // 'id' is the foreign key in Category in respect to Product when we talk about belongsTo
       const result = buildLookupMap<unknown, Category>(
@@ -70,36 +75,4 @@ describe('buildLookupMap', () => {
       expect(result).to.eql(expected);
     });
   });
-
-  //** helpers
-  function createStationery(id: number) {
-    const pen = new Category();
-    pen.name = 'stationery';
-    pen.id = id;
-    return pen;
-  }
-  function createBook(id: number) {
-    const pen = new Category();
-    pen.name = 'book';
-    pen.id = id;
-    return pen;
-  }
-  function createPen(cid: number) {
-    const pen = new Product();
-    pen.name = 'pen';
-    pen.categoryId = cid;
-    return pen;
-  }
-  function createPencil(cid: number) {
-    const pencil = new Product();
-    pencil.name = 'pencil';
-    pencil.categoryId = cid;
-    return pencil;
-  }
-  function createPEraser(cid: number) {
-    const eraser = new Product();
-    eraser.name = 'pencil';
-    eraser.categoryId = cid;
-    return eraser;
-  }
 });
